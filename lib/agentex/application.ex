@@ -14,8 +14,10 @@ defmodule Agentex.Application do
       {Phoenix.PubSub, name: Agentex.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: Agentex.Finch},
-      # Start a worker by calling: Agentex.Worker.start_link(arg)
-      # {Agentex.Worker, arg},
+      # Agent system components
+      {Registry, keys: :unique, name: Agentex.AgentRegistry},
+      Agentex.Memory,
+      Agentex.AgentSupervisor,
       # Start to serve requests, typically the last entry
       AgentexWeb.Endpoint
     ]

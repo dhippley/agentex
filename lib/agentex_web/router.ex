@@ -18,12 +18,21 @@ defmodule AgentexWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/agents", AgentLive
   end
 
   # Other scopes may use custom stacks.
-  # scope "/api", AgentexWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", AgentexWeb do
+    pipe_through :api
+
+    get "/agents", AgentController, :index
+    post "/agents", AgentController, :create
+    get "/agents/stats", AgentController, :stats
+    get "/agents/:id", AgentController, :show
+    delete "/agents/:id", AgentController, :delete
+    post "/agents/:id/message", AgentController, :send_message
+    post "/agents/:id/task", AgentController, :assign_task
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:agentex, :dev_routes) do

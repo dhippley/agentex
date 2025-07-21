@@ -1,0 +1,181 @@
+defmodule Agentex.LLMClient do
+  @moduledoc """
+  Client for interacting with Large Language Model APIs (OpenAI, Anthropic, etc.)
+  """
+  require Logger
+
+  @default_model "gpt-3.5-turbo"
+  @default_max_tokens 1000
+  @default_temperature 0.7
+
+  def chat_completion(messages, opts \\ %{}) do
+    model = opts[:model] || @default_model
+    max_tokens = opts[:max_tokens] || @default_max_tokens
+    temperature = opts[:temperature] || @default_temperature
+    system_prompt = opts[:system]
+    
+    # Prepare the request body
+    request_body = %{
+      model: model,
+      messages: prepare_messages(messages, system_prompt),
+      max_tokens: max_tokens,
+      temperature: temperature
+    }
+    
+    case get_api_provider(model) do
+      :openai -> call_openai_api(request_body)
+      :anthropic -> call_anthropic_api(request_body)
+      :mock -> mock_response(messages)
+      _ -> {:error, :unsupported_model}
+    end
+  end
+
+  defp prepare_messages(messages, system_prompt) do
+    base_messages = if system_prompt do
+      [%{role: "system", content: system_prompt} | messages]
+    else
+      messages
+    end
+    
+    # Convert atom roles to strings and ensure proper format
+    Enum.map(base_messages, fn msg ->
+      %{
+        role: to_string(msg.role || msg["role"]),
+        content: msg.content || msg["content"]
+      }
+    end)
+  end
+
+  defp get_api_provider(model) do
+    cond do
+      String.starts_with?(model, "gpt") -> :openai
+      String.starts_with?(model, "claude") -> :anthropic
+      model == "mock" -> :mock
+      true -> :openai # default to OpenAI
+    end
+  end
+
+  defp call_openai_api(request_body) do
+    api_key = get_openai_api_key()
+    
+    if api_key do
+      headers = [
+        {"Authorization", "Bearer #{api_key}"},
+        {"Content-Type", "application/json"}
+      ]
+      
+      case Req.post("https://api.openai.com/v1/chat/completions", 
+                    json: request_body, 
+                    headers: headers) do
+        {:ok, %{status: 200, body: body}} ->
+          case extract_openai_response(body) do
+            {:ok, content} -> {:ok, content}
+            error -> error
+          end
+          
+        {:ok, %{status: status, body: body}} ->
+          Logger.error("OpenAI API error: #{status} - #{inspect(body)}")
+          {:error, {:api_error, status, body}}
+          
+        {:error, reason} ->
+          Logger.error("OpenAI API request failed: #{inspect(reason)}")
+          {:error, {:request_failed, reason}}
+      end
+    else
+      Logger.warning("No OpenAI API key configured, using mock response")
+      mock_response(request_body.messages)
+    end
+  end
+
+  defp call_anthropic_api(request_body) do
+    api_key = get_anthropic_api_key()
+    
+    if api_key do
+      # Convert OpenAI format to Anthropic format
+      anthropic_body = %{
+        model: request_body.model,
+        max_tokens: request_body.max_tokens,
+        messages: request_body.messages
+      }
+      
+      headers = [
+        {"x-api-key", api_key},
+        {"anthropic-version", "2023-06-01"},
+        {"Content-Type", "application/json"}
+      ]
+      
+      case Req.post("https://api.anthropic.com/v1/messages", 
+                    json: anthropic_body, 
+                    headers: headers) do
+        {:ok, %{status: 200, body: body}} ->
+          case extract_anthropic_response(body) do
+            {:ok, content} -> {:ok, content}
+            error -> error
+          end
+          
+        {:ok, %{status: status, body: body}} ->
+          Logger.error("Anthropic API error: #{status} - #{inspect(body)}")
+          {:error, {:api_error, status, body}}
+          
+        {:error, reason} ->
+          Logger.error("Anthropic API request failed: #{inspect(reason)}")
+          {:error, {:request_failed, reason}}
+      end
+    else
+      Logger.warning("No Anthropic API key configured, using mock response")
+      mock_response(request_body.messages)
+    end
+  end
+
+  defp extract_openai_response(body) do
+    case body do
+      %{"choices" => [%{"message" => %{"content" => content}} | _]} ->
+        {:ok, content}
+      %{"error" => error} ->
+        {:error, {:openai_error, error}}
+      _ ->
+        {:error, {:invalid_response, body}}
+    end
+  end
+
+  defp extract_anthropic_response(body) do
+    case body do
+      %{"content" => [%{"text" => content} | _]} ->
+        {:ok, content}
+      %{"error" => error} ->
+        {:error, {:anthropic_error, error}}
+      _ ->
+        {:error, {:invalid_response, body}}
+    end
+  end
+
+  defp mock_response(messages) do
+    # Simple mock response for development/testing
+    last_message = List.last(messages)
+    user_content = last_message["content"] || "No message"
+    
+    response = """
+    I understand you said: "#{user_content}"
+    
+    This is a mock response from the AI agent. In a real implementation, this would be 
+    generated by an actual LLM like GPT-4 or Claude.
+    
+    The agent is currently in development mode. To use real AI responses, configure 
+    your API keys in the environment:
+    - OPENAI_API_KEY for OpenAI models
+    - ANTHROPIC_API_KEY for Anthropic models
+    """
+    
+    {:ok, response}
+  end
+
+  defp get_openai_api_key do
+    System.get_env("OPENAI_API_KEY") || 
+    Application.get_env(:agentex, :openai_api_key)
+  end
+
+  defp get_anthropic_api_key do
+    System.get_env("ANTHROPIC_API_KEY") || 
+    Application.get_env(:agentex, :anthropic_api_key)
+  end
+end
