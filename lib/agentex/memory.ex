@@ -20,7 +20,7 @@ defmodule Agentex.Memory do
   def store(agent_id, key, value) do
     timestamp = DateTime.utc_now()
     entry = {agent_id, key, value, timestamp}
-    
+
     case :ets.insert(@table_name, entry) do
       true -> {:ok, :stored}
       false -> {:error, :storage_failed}
@@ -42,13 +42,13 @@ defmodule Agentex.Memory do
   """
   def get_all(agent_id) do
     pattern = {agent_id, :"$1", :"$2", :"$3"}
-    
-    entries = 
+
+    entries =
       :ets.match(@table_name, pattern)
-      |> Enum.map(fn [key, value, timestamp] -> 
+      |> Enum.map(fn [key, value, timestamp] ->
         %{key: key, value: value, timestamp: timestamp}
       end)
-    
+
     {:ok, entries}
   end
 
@@ -77,8 +77,8 @@ defmodule Agentex.Memory do
   """
   def search(agent_id, search_term) do
     pattern = {agent_id, :"$1", :"$2", :"$3"}
-    
-    results = 
+
+    results =
       :ets.match(@table_name, pattern)
       |> Enum.filter(fn [key, value, _timestamp] ->
         key_match = String.contains?(to_string(key), search_term)
@@ -88,7 +88,7 @@ defmodule Agentex.Memory do
       |> Enum.map(fn [key, value, timestamp] ->
         %{key: key, value: value, timestamp: timestamp}
       end)
-    
+
     {:ok, results}
   end
 
@@ -97,7 +97,7 @@ defmodule Agentex.Memory do
   @impl true
   def init(_args) do
     Logger.info("Starting Agent Memory system")
-    
+
     # Create ETS table for agent memory
     :ets.new(@table_name, [
       :set,
@@ -106,10 +106,10 @@ defmodule Agentex.Memory do
       {:read_concurrency, true},
       {:write_concurrency, true}
     ])
-    
+
     # Schedule periodic cleanup
     schedule_cleanup()
-    
+
     {:ok, %{}}
   end
 
@@ -131,16 +131,16 @@ defmodule Agentex.Memory do
   defp cleanup_old_entries do
     # Remove entries older than 7 days
     cutoff_date = DateTime.add(DateTime.utc_now(), -7, :day)
-    
+
     all_entries = :ets.tab2list(@table_name)
-    
+
     Enum.each(all_entries, fn {agent_id, key, _value, timestamp} ->
       if DateTime.compare(timestamp, cutoff_date) == :lt do
         pattern = {agent_id, key, :"$1", :"$2"}
         :ets.match_delete(@table_name, pattern)
       end
     end)
-    
+
     Logger.debug("Memory cleanup completed")
   end
 end

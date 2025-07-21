@@ -23,7 +23,7 @@ defmodule Agentex.Tools do
         name: "calculate",
         description: "Perform mathematical calculations",
         parameters: %{
-          type: "object", 
+          type: "object",
           properties: %{
             expression: %{type: "string", description: "Mathematical expression to evaluate"}
           },
@@ -92,12 +92,12 @@ defmodule Agentex.Tools do
         snippet: "This is a mock search result for: #{query}"
       },
       %{
-        title: "Mock Search Result 2", 
+        title: "Mock Search Result 2",
         url: "https://example.com/2",
         snippet: "Another mock result related to: #{query}"
       }
     ]
-    
+
     {:ok, %{query: query, results: results}}
   end
 
@@ -108,11 +108,11 @@ defmodule Agentex.Tools do
     try do
       # Basic math operations only for security
       sanitized = String.replace(expression, ~r/[^0-9+\-*\/().\s]/, "")
-      
+
       case Code.eval_string(sanitized) do
-        {result, _} when is_number(result) -> 
+        {result, _} when is_number(result) ->
           {:ok, %{expression: expression, result: result}}
-        _ -> 
+        _ ->
           {:error, :invalid_expression}
       end
     rescue
@@ -124,7 +124,7 @@ defmodule Agentex.Tools do
 
   defp get_current_time(parameters) do
     timezone = Map.get(parameters, "timezone", "UTC")
-    
+
     case timezone do
       "UTC" ->
         time = DateTime.utc_now()
@@ -138,7 +138,7 @@ defmodule Agentex.Tools do
 
   defp store_memory(%{"key" => key, "value" => value}, context) do
     agent_id = Map.get(context, :agent_id)
-    
+
     if agent_id do
       # Store in ETS or agent state
       Agentex.Memory.store(agent_id, key, value)
@@ -152,7 +152,7 @@ defmodule Agentex.Tools do
 
   defp retrieve_memory(%{"key" => key}, context) do
     agent_id = Map.get(context, :agent_id)
-    
+
     if agent_id do
       case Agentex.Memory.retrieve(agent_id, key) do
         {:ok, value} -> {:ok, %{key: key, value: value}}

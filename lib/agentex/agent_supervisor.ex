@@ -19,7 +19,7 @@ defmodule Agentex.AgentSupervisor do
   """
   def start_agent(opts) do
     child_spec = {Agentex.AgentServer, opts}
-    
+
     case DynamicSupervisor.start_child(__MODULE__, child_spec) do
       {:ok, pid} ->
         agent_id = Keyword.fetch!(opts, :agent_id)
@@ -54,7 +54,7 @@ defmodule Agentex.AgentSupervisor do
     DynamicSupervisor.which_children(__MODULE__)
     |> Enum.map(fn {_id, pid, _type, _modules} ->
       case Registry.keys(Agentex.AgentRegistry, pid) do
-        [agent_id] -> 
+        [agent_id] ->
           state = Agentex.AgentServer.get_state(agent_id)
           %{
             agent_id: agent_id,
@@ -75,7 +75,7 @@ defmodule Agentex.AgentSupervisor do
   """
   def get_stats do
     agents = list_agents()
-    
+
     %{
       total_agents: length(agents),
       active_agents: Enum.count(agents, fn agent -> agent.status == :active end),

@@ -1,6 +1,6 @@
 defmodule AgentexWeb.AgentController do
   use AgentexWeb, :controller
-  
+
   alias Agentex
 
   def index(conn, _params) do
@@ -22,7 +22,7 @@ defmodule AgentexWeb.AgentController do
   def create(conn, %{"name" => name} = params) do
     opts = []
     opts = if Map.has_key?(params, "system_prompt"), do: [system_prompt: params["system_prompt"]] ++ opts, else: opts
-    
+
     case Agentex.create_agent(name, opts) do
       {:ok, agent_id} ->
         conn

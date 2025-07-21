@@ -18,13 +18,13 @@ defmodule Agentex do
   def create_agent(name, opts \\ []) do
     agent_id = generate_agent_id()
     system_prompt = Keyword.get(opts, :system_prompt)
-    
+
     agent_opts = [
       agent_id: agent_id,
       name: name,
       system_prompt: system_prompt
     ]
-    
+
     case AgentSupervisor.start_agent(agent_opts) do
       {:ok, _pid} -> {:ok, agent_id}
       error -> error
