@@ -62,6 +62,39 @@ defmodule Agentex.Tools do
           },
           required: ["key"]
         }
+      },
+      %{
+        name: "generate_id",
+        description: "Generate a unique identifier",
+        parameters: %{
+          type: "object",
+          properties: %{
+            prefix: %{type: "string", description: "Optional prefix for the ID"}
+          }
+        }
+      },
+      %{
+        name: "weather",
+        description: "Get current weather information for a location",
+        parameters: %{
+          type: "object",
+          properties: %{
+            location: %{type: "string", description: "City or location name"}
+          },
+          required: ["location"]
+        }
+      },
+      %{
+        name: "send_notification",
+        description: "Send a notification or alert",
+        parameters: %{
+          type: "object",
+          properties: %{
+            message: %{type: "string", description: "Notification message"},
+            priority: %{type: "string", description: "Priority level (low, medium, high)", default: "medium"}
+          },
+          required: ["message"]
+        }
       }
     ]
   end
@@ -76,6 +109,9 @@ defmodule Agentex.Tools do
       "get_current_time" -> get_current_time(parameters)
       "store_memory" -> store_memory(parameters, context)
       "retrieve_memory" -> retrieve_memory(parameters, context)
+      "generate_id" -> generate_id(parameters)
+      "weather" -> get_weather(parameters)
+      "send_notification" -> send_notification(parameters, context)
       _ -> {:error, {:unknown_tool, tool_name}}
     end
   end
@@ -165,4 +201,57 @@ defmodule Agentex.Tools do
   end
 
   defp retrieve_memory(_, _), do: {:error, :invalid_parameters}
+
+  defp generate_id(parameters) do
+    prefix = Map.get(parameters, "prefix", "")
+
+    id = :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
+
+    full_id = if prefix != "", do: "#{prefix}_#{id}", else: id
+
+    {:ok, %{id: full_id}}
+  end
+
+  defp get_weather(%{"location" => location}) do
+    # Mock weather implementation
+    # In a real implementation, you'd integrate with a weather API
+    weather_data = %{
+      location: location,
+      temperature: Enum.random(15..30),
+      condition: Enum.random(["sunny", "cloudy", "rainy", "partly cloudy"]),
+      humidity: Enum.random(30..80),
+      wind_speed: Enum.random(5..25),
+      last_updated: DateTime.to_iso8601(DateTime.utc_now())
+    }
+
+    {:ok, weather_data}
+  end
+
+  defp get_weather(_), do: {:error, :invalid_parameters}
+
+  defp send_notification(%{"message" => message} = params, context) do
+    priority = Map.get(params, "priority", "medium")
+    agent_id = Map.get(context, :agent_id, "unknown")
+
+    # Mock notification - in real implementation, you'd send to a notification service
+    notification = %{
+      id: :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower),
+      message: message,
+      priority: priority,
+      agent_id: agent_id,
+      timestamp: DateTime.utc_now(),
+      status: "sent"
+    }
+
+    # You could broadcast this via PubSub to notify other parts of the system
+    Phoenix.PubSub.broadcast(
+      Agentex.PubSub,
+      "notifications",
+      {:notification, notification}
+    )
+
+    {:ok, notification}
+  end
+
+  defp send_notification(_, _), do: {:error, :invalid_parameters}
 end
