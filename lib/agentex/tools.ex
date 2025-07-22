@@ -42,7 +42,7 @@ defmodule Agentex.Tools do
       },
       %{
         name: "store_memory",
-        description: "Store information in agent memory",
+        description: "Store information in agent memory (temporary ETS storage)",
         parameters: %{
           type: "object",
           properties: %{
@@ -54,13 +54,49 @@ defmodule Agentex.Tools do
       },
       %{
         name: "retrieve_memory",
-        description: "Retrieve information from agent memory",
+        description: "Retrieve information from agent memory (temporary ETS storage)",
         parameters: %{
           type: "object",
           properties: %{
             key: %{type: "string", description: "Memory key to retrieve"}
           },
           required: ["key"]
+        }
+      },
+      %{
+        name: "store_knowledge",
+        description: "Store important knowledge or information persistently with semantic search capabilities",
+        parameters: %{
+          type: "object",
+          properties: %{
+            content: %{type: "string", description: "Knowledge content to store"},
+            importance: %{type: "number", description: "Importance score 0.0-1.0 (default 0.7)", minimum: 0.0, maximum: 1.0},
+            category: %{type: "string", description: "Optional category or tag"}
+          },
+          required: ["content"]
+        }
+      },
+      %{
+        name: "search_knowledge",
+        description: "Search stored knowledge using semantic similarity",
+        parameters: %{
+          type: "object",
+          properties: %{
+            query: %{type: "string", description: "Search query"},
+            limit: %{type: "number", description: "Maximum results to return (default 5)", minimum: 1, maximum: 20}
+          },
+          required: ["query"]
+        }
+      },
+      %{
+        name: "recall_important_knowledge",
+        description: "Retrieve the most important stored knowledge",
+        parameters: %{
+          type: "object",
+          properties: %{
+            min_importance: %{type: "number", description: "Minimum importance score (default 0.8)", minimum: 0.0, maximum: 1.0},
+            limit: %{type: "number", description: "Maximum results to return (default 10)", minimum: 1, maximum: 20}
+          }
         }
       },
       %{
@@ -109,6 +145,9 @@ defmodule Agentex.Tools do
       "get_current_time" -> get_current_time(parameters)
       "store_memory" -> store_memory(parameters, context)
       "retrieve_memory" -> retrieve_memory(parameters, context)
+      "store_knowledge" -> store_knowledge(parameters, context)
+      "search_knowledge" -> search_knowledge(parameters, context)
+      "recall_important_knowledge" -> recall_important_knowledge(parameters, context)
       "generate_id" -> generate_id(parameters)
       "weather" -> get_weather(parameters)
       "send_notification" -> send_notification(parameters, context)
@@ -254,4 +293,88 @@ defmodule Agentex.Tools do
   end
 
   defp send_notification(_, _), do: {:error, :invalid_parameters}
+
+  # Persistent Memory Tools
+
+  defp store_knowledge(%{"content" => content} = params, context) do
+    agent_id = Map.get(context, :agent_id, "unknown")
+    importance = Map.get(params, "importance", 0.7)
+    category = Map.get(params, "category")
+    
+    metadata = %{
+      source: "agent_tool",
+      category: category,
+      stored_via: "store_knowledge_tool"
+    }
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+    |> Map.new()
+
+    case Agentex.Memory.store_persistent(agent_id, content, metadata, importance) do
+      {:ok, memory} ->
+        {:ok, %{
+          id: memory.id,
+          content: content,
+          importance: importance,
+          status: "stored",
+          message: "Knowledge stored successfully with semantic indexing"
+        }}
+      
+      {:error, error} ->
+        {:error, "Failed to store knowledge: #{inspect(error)}"}
+    end
+  end
+
+  defp store_knowledge(_, _), do: {:error, :invalid_parameters}
+
+  defp search_knowledge(%{"query" => query} = params, context) do
+    agent_id = Map.get(context, :agent_id, "unknown")
+    limit = Map.get(params, "limit", 5)
+
+    case Agentex.Memory.search_semantic(agent_id, query, limit: limit) do
+      {:ok, results} ->
+        formatted_results = Enum.map(results, fn result ->
+          %{
+            content: result.content,
+            similarity: Float.round(result.similarity, 3),
+            importance: result.importance,
+            created_at: result.created_at,
+            metadata: result.metadata
+          }
+        end)
+
+        {:ok, %{
+          query: query,
+          results_count: length(formatted_results),
+          results: formatted_results,
+          message: "Found #{length(formatted_results)} semantically similar memories"
+        }}
+    end
+  end
+
+  defp search_knowledge(_, _), do: {:error, :invalid_parameters}
+
+  defp recall_important_knowledge(params, context) do
+    agent_id = Map.get(context, :agent_id, "unknown")
+    min_importance = Map.get(params, "min_importance", 0.8)
+    limit = Map.get(params, "limit", 10)
+
+    case Agentex.Memory.get_important_persistent(agent_id, min_importance: min_importance, limit: limit) do
+      {:ok, results} ->
+        formatted_results = Enum.map(results, fn result ->
+          %{
+            content: result.content,
+            importance: result.importance,
+            created_at: result.created_at,
+            metadata: result.metadata
+          }
+        end)
+
+        {:ok, %{
+          min_importance: min_importance,
+          results_count: length(formatted_results),
+          results: formatted_results,
+          message: "Retrieved #{length(formatted_results)} important memories"
+        }}
+    end
+  end
 end

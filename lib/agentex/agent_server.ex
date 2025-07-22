@@ -97,6 +97,10 @@ defmodule Agentex.AgentServer do
           last_activity: DateTime.utc_now()
         }
 
+        # Store important conversations as persistent memories
+        conversation_turn = %{user: user_message, assistant: response}
+        Agentex.Memory.auto_store_conversation(state.agent_id, conversation_turn)
+
         # Broadcast state update
         broadcast_state_update(new_state)
 
