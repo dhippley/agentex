@@ -30,28 +30,79 @@ Agentex is a powerful, real-time agentic AI platform that allows you to create, 
 
 - **Elixir/Phoenix** — Real-time web and process orchestration
 - **GenServers/Agents** — Agent memory/state management
-- **ETS** — Fast in-memory storage for agent memory
+- **PostgreSQL + pgvector** — Vector database for semantic memory search
+- **Bumblebee + Nx** — Machine learning and embedding generation
+- **EXLA** — Google XLA backend for fast tensor operations
+- **ETS** — Fast in-memory storage for temporary agent memory
 - **Phoenix LiveView** — Real-time UI for agent interaction
 - **Phoenix PubSub** — Real-time communication between agents and UI
 - **External LLM API** — For AI cognition (OpenAI, Anthropic, etc.)
 - **RESTful API** — Programmatic access to agents
+- **Docker Compose** — Containerized database deployment
+
+## 🧮 Vector Storage & Semantic Memory
+
+Agentex features a sophisticated **persistent memory system** with vector embeddings for semantic search:
+
+### Key Features
+- **🎯 Semantic Search**: Find memories by meaning, not just keywords
+- **📊 Embedding Generation**: Automatic text-to-vector conversion using sentence transformers
+- **⚡ Fast Similarity Search**: Optimized PostgreSQL with pgvector extension
+- **🏆 Importance Scoring**: Prioritize valuable memories (0.0 - 1.0 scale)
+- **🔄 Hybrid Storage**: ETS for fast temporary data, PostgreSQL for persistent knowledge
+- **🐳 Docker Ready**: Easy setup with Docker Compose
+
+### How It Works
+```elixir
+# Store important memories with semantic embeddings
+{:ok, memory} = Agentex.Memory.store_persistent(
+  "agent_123", 
+  "Elixir's Actor model enables fault-tolerant systems", 
+  %{source: "learning"}, 
+  0.9  # importance score
+)
+
+# Search by semantic similarity
+{:ok, results} = Agentex.Memory.search_semantic(
+  "agent_123", 
+  "fault tolerance programming", 
+  limit: 5
+)
+# Returns memories about fault tolerance, Actor model, resilience, etc.
+```
+
+### Quick Database Setup
+```bash
+# Start PostgreSQL with pgvector
+./db.sh start
+
+# Set up database (first time)
+./db.sh setup
+
+# Test vector storage
+iex -S mix
+Agentex.VectorStoreTest.run_test()
+```
+
+See [`VECTOR_STORE.md`](VECTOR_STORE.md) for detailed documentation.
 
 ## 🚀 Features
 
 - **Multi-Agent System**: Create and manage multiple AI agents simultaneously
 - **Real-time Communication**: Instant messaging with agents via LiveView
+- **Vector Memory Storage**: Semantic memory with PostgreSQL + pgvector for intelligent recall
 - **Tool Integration**: Agents can use tools like calculator, web search, memory storage
 - **Task Assignment**: Assign complex tasks to agents for background processing
-- **Memory Management**: Each agent has persistent memory using ETS
+- **Hybrid Memory Management**: Fast ETS + persistent vector database storage
 - **API Access**: Full REST API for programmatic interaction
 - **Live Dashboard**: Real-time monitoring of agent states and activities
+- **Docker Integration**: Easy database setup with Docker Compose
 
 
 ## 🚧 Features in Progress
 
 The following features are currently under development:
 
-- **Persistent Memory (Vector Store, DB)** - Enhanced memory with vector embeddings and database persistence for long-term agent knowledge retention
 - **Retrieval-Augmented Generation (RAG)** - Integration with vector databases and document retrieval for knowledge-enhanced agent responses
 - **Local Model Integration with Axon** - Support for running local ML models using Elixir's Axon library for privacy and reduced latency
 - **Agent Planning/Goal-Setting Logic** - Advanced planning capabilities allowing agents to break down complex goals into actionable steps and track progress
@@ -79,6 +130,7 @@ Each agent has access to these tools:
 - Elixir 1.14+
 - Phoenix 1.7+
 - Node.js (for assets)
+- Docker & Docker Compose (for database)
 
 ### Installation
 
@@ -98,12 +150,34 @@ mix deps.get
 cd assets && npm install && cd ..
 ```
 
-4. Start the Phoenix server:
+4. Set up the PostgreSQL database with vector support:
+```bash
+# Start database container
+./db.sh start
+
+# Create database and run migrations (first time only)
+./db.sh setup
+```
+
+5. Start the Phoenix server:
 ```bash
 mix phx.server
 ```
 
-5. Visit [`localhost:4000/agents`](http://localhost:4000/agents) for the web interface
+6. Visit [`localhost:4000/agents`](http://localhost:4000/agents) for the web interface
+
+### Database Management
+
+Use the convenient `db.sh` script for database operations:
+
+```bash
+./db.sh start      # Start PostgreSQL container
+./db.sh stop       # Stop PostgreSQL container
+./db.sh logs       # View database logs
+./db.sh shell      # Connect to PostgreSQL shell
+./db.sh status     # Check container status
+./db.sh reset      # Reset database (WARNING: deletes all data)
+```
 
 ### API Configuration (Optional)
 
@@ -161,6 +235,24 @@ Agentex.Demo.run_demo(agent_ids)
 # Assign tasks
 Agentex.Demo.assign_demo_tasks(agent_ids)
 
+# Test vector storage functionality
+Agentex.VectorStoreTest.run_test()
+
+# Store a persistent memory with semantic embedding
+{:ok, memory} = Agentex.Memory.store_persistent(
+  "agent_123", 
+  "Phoenix LiveView enables real-time web applications", 
+  %{category: "web-dev"}, 
+  0.8
+)
+
+# Search memories semantically
+{:ok, results} = Agentex.Memory.search_semantic(
+  "agent_123", 
+  "real-time web development", 
+  limit: 5
+)
+
 # Check system stats
 Agentex.Demo.show_stats()
 ```
@@ -193,10 +285,13 @@ Each agent is a GenServer that maintains:
 - System prompt/personality
 
 ### Memory System
-- ETS-based storage for fast access
-- Per-agent memory isolation
-- Automatic cleanup of old entries
-- Search and retrieval capabilities
+- **Hybrid Storage**: ETS for fast temporary memory + PostgreSQL for persistent knowledge
+- **Vector Embeddings**: Automatic semantic embedding generation using sentence transformers
+- **Similarity Search**: Fast vector similarity search with pgvector extension
+- **Importance Scoring**: Weighted memory retention based on importance (0.0-1.0)
+- **Per-agent Isolation**: Each agent maintains separate memory spaces
+- **Automatic Cleanup**: Intelligent retention policies for memory management
+- **Semantic Retrieval**: Find memories by meaning, not just exact keyword matches
 
 ### Tool System
 - Modular tool architecture

@@ -34,8 +34,3 @@ agentex-*.tar
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/
-
-init-db/01-init.sql
-.gitignore
-VECTOR_STORE.md
-IMPLEMENTATION.md
