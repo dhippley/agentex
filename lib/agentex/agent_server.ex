@@ -183,11 +183,100 @@ defmodule Agentex.AgentServer do
     messages = prepare_messages_for_llm(state, user_message)
 
     # Call LLM API
-    LLMClient.chat_completion(messages, %{
+    case LLMClient.chat_completion(messages, %{
       system: state.system_prompt,
       tools: state.tools,
       memory: state.memory
-    })
+    }) do
+      {:ok, response} ->
+        # Check if the response contains tool calls
+        case parse_tool_calls(response) do
+          [] ->
+            # No tools called, return the response as-is
+            {:ok, response}
+
+          tool_calls ->
+            # Execute tools and get an enhanced response
+            execute_tools_and_respond(state, user_message, tool_calls)
+        end
+
+      error -> error
+    end
+  end
+
+  defp parse_tool_calls(response) do
+    # Simple pattern matching for tool calls in response
+    # Format: [TOOL:tool_name(param1=value1,param2=value2)]
+    tool_pattern = ~r/\[TOOL:(\w+)\(([^)]*)\)\]/
+
+    Regex.scan(tool_pattern, response)
+    |> Enum.map(fn [_full_match, tool_name, params_str] ->
+      params = parse_tool_params(params_str)
+      %{name: tool_name, parameters: params}
+    end)
+  end
+
+  defp parse_tool_params(params_str) do
+    # Parse parameters like "key1=value1,key2=value2"
+    if params_str == "" do
+      %{}
+    else
+      params_str
+      |> String.split(",")
+      |> Enum.reduce(%{}, fn param, acc ->
+        case String.split(param, "=", parts: 2) do
+          [key, value] ->
+            Map.put(acc, String.trim(key), String.trim(value))
+          _ ->
+            acc
+        end
+      end)
+    end
+  end
+
+  defp execute_tools_and_respond(state, user_message, tool_calls) do
+    # Execute each tool call
+    tool_results =
+      Enum.map(tool_calls, fn tool_call ->
+        context = %{agent_id: state.agent_id}
+        case Tools.execute_tool(tool_call.name, tool_call.parameters, context) do
+          {:ok, result} ->
+            %{tool: tool_call.name, success: true, result: result}
+          {:error, reason} ->
+            %{tool: tool_call.name, success: false, error: reason}
+        end
+      end)
+
+    # Create a summary of tool execution
+    tool_summary = format_tool_results(tool_results)
+
+    # Send another request to LLM with tool results
+    enhanced_prompt = """
+    Original user message: #{user_message}
+
+    I executed the following tools:
+    #{tool_summary}
+
+    Please provide a comprehensive response to the user incorporating these tool results.
+    """
+
+    case LLMClient.chat_completion([%{role: :user, content: enhanced_prompt}], %{
+      system: state.system_prompt
+    }) do
+      {:ok, response} -> {:ok, response}
+      error -> error
+    end
+  end
+
+  defp format_tool_results(tool_results) do
+    Enum.map(tool_results, fn result ->
+      if result.success do
+        "✓ #{result.tool}: #{inspect(result.result)}"
+      else
+        "✗ #{result.tool}: Error - #{inspect(result.error)}"
+      end
+    end)
+    |> Enum.join("\n")
   end
 
   defp prepare_messages_for_llm(state, user_message) do

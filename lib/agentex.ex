@@ -42,8 +42,12 @@ defmodule Agentex do
   Assign a task to an agent.
   """
   def assign_task(agent_id, task) do
-    AgentServer.assign_task(agent_id, task)
-    {:ok, :task_assigned}
+    try do
+      AgentServer.assign_task(agent_id, task)
+      {:ok, :task_assigned}
+    rescue
+      _ -> {:error, :agent_not_found}
+    end
   end
 
   @doc """
