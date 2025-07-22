@@ -46,7 +46,21 @@ Agentex is a powerful, real-time agentic AI platform that allows you to create, 
 - **API Access**: Full REST API for programmatic interaction
 - **Live Dashboard**: Real-time monitoring of agent states and activities
 
-## 🛠️ Available Tools
+
+## 🚧 Features in Progress
+
+The following features are currently under development:
+
+- **Persistent Memory (Vector Store, DB)** - Enhanced memory with vector embeddings and database persistence for long-term agent knowledge retention
+- **Retrieval-Augmented Generation (RAG)** - Integration with vector databases and document retrieval for knowledge-enhanced agent responses
+- **Local Model Integration with Axon** - Support for running local ML models using Elixir's Axon library for privacy and reduced latency
+- **Agent Planning/Goal-Setting Logic** - Advanced planning capabilities allowing agents to break down complex goals into actionable steps and track progress
+- **Multi-agent Coordination (Swarm-like Behavior)** - Enable agents to collaborate, communicate, and coordinate tasks across multiple agents for complex problem solving
+- **Goal Decomposition / Planning** - Sophisticated goal breakdown system that creates hierarchical task trees and execution strategies
+- **Streaming Responses** - Real-time streaming of agent responses for improved user experience and faster feedback
+- **Real-time Notifications** - Enhanced notification system with webhooks, email, and push notifications for agent events
+
+## �🛠️ Available Tools
 
 Each agent has access to these tools:
 
@@ -220,35 +234,3 @@ Each agent is a GenServer that maintains:
 
 This project is licensed under the MIT License.
 
-## 🙏 Acknowledgments
-
-- Phoenix Framework team
-- Elixir community
-- OpenAI and Anthropic for AI APIs
-```
-+-----------------+          +------------------+
-|  User/Browser   | <------> |  Phoenix LiveView|  <- UI (optional)
-+-----------------+          +------------------+
-                                  |
-                                  v
-                        +-------------------+
-                        |    Agent Server    | <- GenServer per agent
-                        +-------------------+
-                                  |
-           +------------------+  |   +----------------------+
-           | LLM/AI API       |<---->|  Planning / Tools     |
-           +------------------+     +----------------------+
-                                  |
-                          +----------------+
-                          |  Persistent Store|
-                          |  (ETS / DB)     |
-                          +----------------+
-```
-```
-🧠 Tech Stack
-Elixir/Phoenix — Real-time web and process orchestration
-Nx/Axon — ML inference (if you're running lightweight models or using embedded logic)
-External LLM API — For cognition, e.g. OpenAI, Anthropic, etc.
-ETS/GenServers/Agents — Agent memory/state
-Phoenix LiveView or Channels — Real-time UI or streaming interaction
-```
