@@ -58,7 +58,13 @@ defmodule Agentex.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      {:req, "~> 0.5.0"}
+      {:req, "~> 0.5.0"},
+      # Vector store and embeddings for persistent memory
+      {:pgvector, "~> 0.2.0"},
+      {:nx, "~> 0.7"},
+      {:bumblebee, "~> 0.5"},
+      {:exla, "~> 0.7"},
+      {:axon, "~> 0.6"}
     ]
   end
 
