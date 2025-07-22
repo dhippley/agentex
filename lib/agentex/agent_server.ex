@@ -9,6 +9,7 @@ defmodule Agentex.AgentServer do
   alias Agentex.LLMClient
   alias Agentex.Tools
 
+  @derive {Jason.Encoder, only: [:agent_id, :name, :system_prompt, :conversation_history, :current_task, :status, :created_at, :last_activity]}
   defstruct [
     :agent_id,
     :name,

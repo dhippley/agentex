@@ -9,7 +9,7 @@ defmodule Agentex.Application do
   def start(_type, _args) do
     children = [
       AgentexWeb.Telemetry,
-      Agentex.Repo,
+      Agentex.Repo, # Re-enabled for persistent memory storage
       {DNSCluster, query: Application.get_env(:agentex, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Agentex.PubSub},
       # Start the Finch HTTP client for sending emails
@@ -17,6 +17,7 @@ defmodule Agentex.Application do
       # Agent system components
       {Registry, keys: :unique, name: Agentex.AgentRegistry},
       Agentex.Memory,
+      Agentex.Memory.Embeddings, # Add embeddings service
       Agentex.AgentSupervisor,
       # Start to serve requests, typically the last entry
       AgentexWeb.Endpoint
